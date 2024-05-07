@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Page Title</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+</head>
+
+<body>
+    <script>
+        import jsonld from 'jsonld/lib/jsonld.js';
+
+        let json = ({
+            "@context": [
+                "https://www.w3.org/2018/credentials/v1",
+                "https://w3id.org/security/suites/jws-2020/v1",
+                "https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#"
+            ],
+            "type": [
+                "VerifiableCredential"
+            ],
+            "id": "https://arlabdevelopments.com/.well-known/ArsysParticipant.json",
+            "issuer": "did:web:arlabdevelopments.com",
+            "issuanceDate": "2023-11-14T12:01:43.434Z",
+            "credentialSubject": {
+                "gx:legalName": "Arsys Internet, S.L.U.",
+                "gx:headquarterAddress": {
+                    "gx:countrySubdivisionCode": "ES-RI"
+                },
+                "gx:legalRegistrationNumber": {
+                    "id": "https://arlabdevelopments.com/.well-known/legalRegistrationNumberVC.json"
+                },
+                "gx:legalAddress": {
+                    "gx:countrySubdivisionCode": "ES-RI"
+                },
+                "type": "gx:LegalParticipant",
+                "gx-terms-and-conditions:gaiaxTermsAndConditions": "70c1d713215f95191a11d38fe2341faed27d19e083917bc8732ca4fea4976700",
+                "id": "https://arlabdevelopments.com/.well-known/ArsysParticipant.json"
+            }
+        })
+
+
+        let normalizado = await jsonld.normalize(json);
+        alert(normalizado);
+        alert("goasd");
+        document.getElementById("texto").innerHTML = normalizado1;
+        console.log(normalizado);
+    </script>
+
+</body>
+
+</html>
