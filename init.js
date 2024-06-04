@@ -2,38 +2,49 @@ import jsonld from 'jsonld/lib/jsonld.js';
 import { CompactSign, importPKCS8 } from 'jose'
 import crypto from 'crypto'
 
-import vcCtx from "./public/credentials_v1_context.json" assert { type: "json" };
-import jwsCtx from "./public/jws2020_v1_context.json" assert { type: "json" };
-import trustframeworkCtx from "./public/trustframework_context.json" assert { type: "json" };
+import vcCtx from "./public/credentials_v1_context.json" with { type: "json" };
+import jwsCtx from "./public/jws2020_v1_context.json" with { type: "json" };
+import trustframeworkCtx from "./public/trustframework_context.json" with { type: "json" };
 
-import myJson from "./public/myJson.json" assert {type: "json"};
 import express from 'express';
 import bodyParser from 'body-parser';
 
+import fs from 'fs';
+import http from 'http';
+import https from 'https';
+let privateKey  = fs.readFileSync('privkey1.pem', 'utf8');
+let certificate = fs.readFileSync('fullchain.pem', 'utf8');
+
+var credentials = {key: privateKey, cert: certificate};
 // Aquí monto el API REST para crear el JWS según la petición que reciba
 const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-const PORT = 3000;
+var httpsServer = https.createServer(credentials, app);
 
-app.listen(PORT, () => {
-  console.log("Server Listening on PORT:", PORT);
+const PORT_HTTPS = 3000;
+
+httpsServer.listen(PORT_HTTPS,() => {
+  console.log("Server HTTPS Listening on PORT:", PORT_HTTPS);
 });
 
+
+
+
 app.post("/jws", async (request, response) => {
-  let prueba = JSON.parse(request.body.json);
-  console.log(await createJWS(request.body.pem, prueba));
-  response.send({ "JSW": await createJWS(pemPrivateKey, myJson) });
+  console.log(request.body);
+  
+  
+  let verifiableCredential = JSON.parse(request.body.json);
+  let privateKey = request.body.pem.trim();
+  console.log(await createJWS(privateKey, verifiableCredential));
+  response.send(await createSignedJSON(privateKey, verifiableCredential));
 });
 
 
 app.get("/jws", async (request, response) => {
-  console.log(await createJWS(pemPrivateKey, myJson));
-  response.send({ "JSW": await createJWS(pemPrivateKey, myJson) });
+  response.send({ "Error": "Solo se admiten peticiones POST" });
 });
-// Definimos la clave privada para los get
-const pemPrivateKey =
-  "-----BEGIN PRIVATE KEY-----MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRBL6jVcYoKb4gIp+qC27Hst/Mo7kCvYhDKkN5QNMtYL2rsydRwqfM8nEjeCJ7dhZR4Q7PfGEkQ8K5YAhByxE5VjWYYQNVyX4VrUSUEn0IGm5DjEkGmrUPgLOyL3A0Jv/SSovYKxMx6bNODfvg8MABb7+AtrY3GV+EPCk+T5iDax7uHfxKfpnjz4D8fGMy5bVHW+b1Fu/81j3/TmeJPmWfqAocajmlRqrYi7ObxIv2smtk55TaepnvwEatkIExmcyUprUK2T9IudLyBvtyc2/lYdzOqqkKr7XEhmbmoOvPi57L0oxeRpAz7Ydwmod+rUCDKSZbjFYF/9cMHNx2PggtAgMBAAECggEBALEpEFxoyzgniVq7fhEm95KT7lUJQDsuYlxrah1P8K45nQn3I5CNKKTxqSujG7cBdBGabG84wS13sYhl+RmrAMJUa8DoGWeRDSlaXxISSZ+gp2zhbtQGNQka0TRqOPQ7SgH35WgnunFH4A58k80owdV13h8+vlsdSnROebayyFY532SnWahi4e6bvU3mkwe+gBA65bbVIm2JdDtZJLhUyMFsMsm0Y8YMw8jpYAQtSkiNc7p/wLCNAp2dOcJ4Y8qsjZxDIv+5d+23h6Zr8PmLfL+gtV+sos1hASaMJHetlAibBx+jP1Xdxma9WJYYXXj7MUP2bmMam0pRv4dvCNZJRBECgYEA/ohrXhEaVL+RlNQkSvJFHvAJke/nxg4ZfNBQArufw72Jb8ec4bTa9dJDa9AHHx5xLUbV1YatcyqtmcETZMx5AHOo4nv/oucEu71U71XUE1pe2VZAaOFdAj4ZUWIFvCtjlXTyXG2OngdHUiOjlNh5qaas92kIq4kAlrFiD1L/1esCgYEA0jkqboRTUW42PFcTfuKV+Eob3hwVz3++YxvMDH6/+bHyHpJXHb+j+q5KAk8d3PkuGzieDl+ElCEw38R+jou6d1ONzKVRzjIJynjxIgrB4PZP9F7pLeIvZ+1gerlpYJyViehjBY3i0svn95pZKzypMOwec5chQGS2y5W1UzSsHEcCgYBRlE29R4QF96RkbB35u261/L9Ee/zwOKKoo2eRiKsrJHuBTRwWJ04qjaq4SmON8MbbeSGeH11GVT5w0jYyD2sU3v0ZIh8MCjk1JvirAPpI/aT6ya85LkoOJvMcZ2tpJQr04xeu0hpswe51ACE02rEb0+UKIyr5N57trYq9WJ/Q4wKBgDa6BQ7SSfJn85yPupaMnCgP+uM+gnsLMWARq3QRRx7UsUg+JomrCyBGYSPqvsZ45ATYH2V0fkolvdhzCdNIEtnfmYmN/Bbmtd/MzlFjZYeP986RKrj0Kg0vIa+xNvqcqN1G7whSIJtp09CEkPQNjaobve2viUt/LIshRRwNGUUfAoGBAMkzlBSJto78fsXL9b8oAiUsrSFsO/VnoKbjdxqMn1kn6yv86zTaYPdX6YzGAiSwbwByMuFF+e9k40iftYUDtZ29mECTVsO5Qrdxe5/72Zes7T2/cdo9HcvObKDPNgfV7JYRhBM9xF1LeuUXkS8bmvgLi0xWVYjiSLzu9a+M1QH0-----END PRIVATE KEY-----"
 
 //Funcion de normalización del payload
 async function normalize(payload) {
@@ -93,5 +104,19 @@ async function createJWS(pem, json) {
     b64: false, crit: ['b64']
   }).sign(rsaPrivateKey);
 }
+async function createSignedJSON(pem, json) {
 
-console.log()
+  console.log(json)
+  const signedVerifiableCredential =
+  {
+    ...json,
+    proof: {
+      type: 'JsonWebSignature2020',
+      created: new Date().toISOString(),
+      proofPurpose: 'assertionMethod',
+      verificationMethod: "did:web:arlabdevelopments.com#JWK2020-RSA",
+      jws: await createJWS(pem, json)
+    }
+  };
+  return await signedVerifiableCredential;
+}
